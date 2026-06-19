@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>t1yOS SDK — Browser Example</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      .section {
+        margin: 20px 0;
+        padding: 16px;
+        background: #f5f5f5;
+        border-radius: 8px;
+      }
+      button {
+        margin: 4px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        background: #4f46e5;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #4338ca;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 13px;
+      }
+      .status {
+        padding: 8px;
+        border-radius: 4px;
+        margin: 8px 0;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        margin: 4px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: monospace;
+        box-sizing: border-box;
+      }
+      label {
+        font-weight: 600;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>t1yOS SDK — Browser Example</h1>
+
+    <div class="section">
+      <h3>Configuration</h3>
+      <label>baseUrl</label>
+      <input id="baseUrl" value="https://myapp.t1y.net" placeholder="https://myapp.t1y.net" />
+      <label>App ID</label>
+      <input id="appId" type="number" value="1001" placeholder="1001" />
+      <label>API Key (32 chars)</label>
+      <input
+        id="apiKey"
+        value="bfb15e6061e1430799302b9284df886f"
+        placeholder="32-character API Key"
+      />
+      <label>Secret Key (32 chars)</label>
+      <input
+        id="secretKey"
+        value="80024f51c0dd403f815d57f51075b0b2"
+        placeholder="32-character Secret Key"
+      />
+      <button id="initBtn">Initialize SDK</button>
+    </div>
+
+    <div class="section">
+      <h3>Database Operations</h3>
+      <label>Collection Name</label>
+      <input id="collection" value="test" placeholder="collection name" />
+      <button id="insertBtn" disabled>Insert One</button>
+      <button id="findOneBtn" disabled>Find One</button>
+      <button id="findBtn" disabled>Find (Paginated)</button>
+      <button id="updateBtn" disabled>Update One</button>
+      <button id="deleteBtn" disabled>Delete One</button>
+      <button id="countBtn" disabled>Count</button>
+      <button id="aggregateBtn" disabled>Aggregate</button>
+    </div>
+
+    <div class="section">
+      <h3>Metadata & Cloud Functions</h3>
+      <button id="metaBtn" disabled>Get Meta</button>
+      <button id="callFuncBtn" disabled>Call Cloud Function</button>
+    </div>
+
+    <div id="status"></div>
+    <div class="section">
+      <h3>Output</h3>
+      <pre id="output">// Results will appear here...</pre>
+    </div>
+
+    <!-- Load SDK from local build -->
+    <script src="../../dist/umd/t1y.min.js"></script>
+    <script>
+      let client = null
+      const statusEl = document.getElementById('status')
+      const outputEl = document.getElementById('output')
+
+      function showStatus(msg, type) {
+        statusEl.innerHTML = `<div class="status ${type}">${msg}</div>`
+      }
+
+      function showResult(data) {
+        outputEl.textContent = JSON.stringify(data, null, 2)
+      }
+
+      function enableButtons(enabled) {
+        document.querySelectorAll('button:not(#initBtn)').forEach((b) => (b.disabled = !enabled))
+      }
+
+      document.getElementById('initBtn').addEventListener('click', async () => {
+        try {
+          client = new T1Y.T1YOS({
+            baseUrl: document.getElementById('baseUrl').value,
+            appId: parseInt(document.getElementById('appId').value),
+            apiKey: document.getElementById('apiKey').value,
+            secretKey: document.getElementById('secretKey').value,
+          })
+
+          await client.init()
+          showStatus('SDK initialized successfully!', 'success')
+          enableButtons(true)
+        } catch (err) {
+          showStatus(`Init failed: ${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      const coll = () => client.db.collection(document.getElementById('collection').value)
+
+      document.getElementById('insertBtn').addEventListener('click', async () => {
+        try {
+          const res = await coll().insertOne({
+            name: 'WangHua',
+            age: 23,
+            value: Math.random(),
+            customTimeAt: T1Y.timeNow.Now(),
+          })
+          showStatus(`Inserted: ${res.data.objectId}`, 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('findOneBtn').addEventListener('click', async () => {
+        try {
+          const findRes = await coll().find(1, 1, { createdAt: -1 }, {})
+          if (!findRes.data.results || findRes.data.results.length === 0) {
+            showStatus('No document found', 'info')
+            return
+          }
+          const res = await coll().findById(findRes.data.results[0]._id)
+          showStatus('Found document', 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('findBtn').addEventListener('click', async () => {
+        try {
+          const res = await coll().find(1, 10, { createdAt: -1 }, {})
+          showStatus(`Found ${res.data.pagination.totalItems} documents`, 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('updateBtn').addEventListener('click', async () => {
+        try {
+          const findRes = await coll().find(1, 1, { createdAt: -1 }, {})
+          if (!findRes.data.results || findRes.data.results.length === 0) {
+            showStatus('No document to update', 'info')
+            return
+          }
+          const res = await coll().updateById(findRes.data.results[0]._id, {
+            updated: true,
+          })
+          showStatus('Updated', 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('deleteBtn').addEventListener('click', async () => {
+        try {
+          const findRes = await coll().find(1, 1, { createdAt: -1 }, {})
+          if (!findRes.data.results || findRes.data.results.length === 0) {
+            showStatus('No document to delete', 'info')
+            return
+          }
+          const res = await coll().deleteById(findRes.data.results[0]._id)
+          showStatus('Deleted', 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('countBtn').addEventListener('click', async () => {
+        try {
+          const res = await coll().count({})
+          showStatus(`Count: ${res.data.count}`, 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('aggregateBtn').addEventListener('click', async () => {
+        try {
+          const res = await coll().aggregate([{ $group: { _id: null, count: { $sum: 1 } } }])
+          showStatus('Aggregate complete', 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('metaBtn').addEventListener('click', async () => {
+        try {
+          const res = await client.getMeta()
+          showStatus('Meta retrieved', 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`[ERROR]${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+
+      document.getElementById('callFuncBtn').addEventListener('click', async () => {
+        try {
+          const res = await client.callFunc('hello', { name: 'World' })
+          showStatus('Function called', 'success')
+          showResult(res)
+        } catch (err) {
+          showStatus(`${err.message}`, 'error')
+          showResult(err)
+        }
+      })
+    </script>
+  </body>
+</html>
