@@ -9,12 +9,15 @@
  * - Auth header injection
  * - Platform-agnostic request execution (via platform adapters)
  * - Response processing (decryption, timestamp formatting)
+ *
+ * NOTE: Does NOT use `new URL()` or `URLSearchParams` because these are
+ * not available in WeChat Mini Program and similar environments.
  */
 
 import { encryptAESGCM } from '../crypto/aes'
 import { createSignature, getSafeTimestamp } from '../crypto/sign'
 import { convertDateTypes } from '../utils/convert'
-import { appendQueryParams, normalizeBaseUrl } from '../utils/url'
+import { buildQueryString, normalizeBaseUrl, getPathAndQuery } from '../utils/url'
 import { REQUEST_TIMEOUT_MS } from '../constants'
 import { handleResponse, handleFetchError } from './response'
 import { getPlatformRequest } from '../platform/dispatcher'
@@ -58,8 +61,8 @@ export async function executeRequest<T = unknown>(
   const baseUrl = normalizeBaseUrl(client.baseUrl)
   const isSafeMode = encryption ?? client.isSafeMode
 
-  // Build URL
-  const fullUrl = new URL(baseUrl + path)
+  // Build URL string (avoid `new URL()` — not available in WeChat Mini Program)
+  let fullUrl = baseUrl + path
 
   // Convert Date types in params
   const convertedParams = convertDateTypes(params)
@@ -91,14 +94,17 @@ export async function executeRequest<T = unknown>(
     Object.keys(convertedParams as object).length > 0
   ) {
     // For GET requests, append params as query string
-    appendQueryParams(fullUrl, convertedParams as Record<string, unknown>)
+    const qs = buildQueryString(convertedParams as Record<string, unknown>)
+    if (qs) {
+      fullUrl += qs
+    }
   }
 
   // Compute timestamp with offset
   const timestamp = Number(getSafeTimestamp(client.offset))
 
-  // Get the path + query for signing
-  const originalURL = fullUrl.pathname + fullUrl.search
+  // Get the path + query for signing (extract from the full URL string)
+  const originalURL = getPathAndQuery(fullUrl)
 
   // Create the HMAC-SHA256 signature
   const sign = createSignature({
@@ -116,7 +122,7 @@ export async function executeRequest<T = unknown>(
 
   try {
     const response = await platformRequest({
-      url: fullUrl.toString(),
+      url: fullUrl,
       method,
       headers: {
         'X-T1Y-Application-ID': String(client.appId),

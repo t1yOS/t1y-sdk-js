@@ -118,6 +118,24 @@ function utf8ToBytes(str: string): Uint8Array {
   return new Uint8Array(bytes) as Uint8Array<ArrayBuffer>
 }
 
+/**
+ * Write a 64-bit unsigned integer in big-endian format.
+ * Uses Number (not BigInt) for ES2017 compatibility.
+ * The value must be within Number.MAX_SAFE_INTEGER (2^53 - 1).
+ */
+function writeUint64BE(buf: Uint8Array, offset: number, value: number): void {
+  const hi = Math.floor(value / 0x100000000)
+  const lo = value % 0x100000000
+  buf[offset] = (hi >>> 24) & 0xff
+  buf[offset + 1] = (hi >>> 16) & 0xff
+  buf[offset + 2] = (hi >>> 8) & 0xff
+  buf[offset + 3] = hi & 0xff
+  buf[offset + 4] = (lo >>> 24) & 0xff
+  buf[offset + 5] = (lo >>> 16) & 0xff
+  buf[offset + 6] = (lo >>> 8) & 0xff
+  buf[offset + 7] = lo & 0xff
+}
+
 /** SHA-256 implementation that operates on raw bytes */
 function sha256Raw(bytes: Uint8Array): string {
   const K = [
@@ -141,10 +159,9 @@ function sha256Raw(bytes: Uint8Array): string {
   const padded = new Uint8Array(totalLen)
   padded.set(bytes)
   padded[msgByteLen] = 0x80
-  // Write length as 64-bit big-endian
-  for (let i = 0; i < 8; i++) {
-    padded[totalLen - 8 + i] = Number((BigInt(msgBitLen) >> BigInt((7 - i) * 8)) & BigInt(0xff))
-  }
+  // Write length as 64-bit big-endian (using Number, no BigInt for ES2017 compat)
+  // msgBitLen fits in Number (max ~2^35 bits for 2^32 * 8 bytes)
+  writeUint64BE(padded, totalLen - 8, msgBitLen)
 
   const H = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,

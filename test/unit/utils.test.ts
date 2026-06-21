@@ -16,7 +16,7 @@ import {
   isPlainObject,
   isNonEmptyArrayWithNonEmptyObjects,
 } from '../../src/utils/convert'
-import { normalizeBaseUrl, appendQueryParams } from '../../src/utils/url'
+import { normalizeBaseUrl, buildQueryString, getPathAndQuery } from '../../src/utils/url'
 import { formatTimestampsToLocal } from '../../src/utils/time'
 import { T1YError, ValidationError } from '../../src/utils/errors'
 
@@ -198,25 +198,46 @@ describe('normalizeBaseUrl', () => {
   })
 })
 
-describe('appendQueryParams', () => {
-  it('should append params to URL', () => {
-    const url = new URL('https://example.com/api')
-    appendQueryParams(url, { name: 'Alice', age: 25 })
-    expect(url.searchParams.get('name')).toBe('Alice')
-    expect(url.searchParams.get('age')).toBe('25')
+describe('buildQueryString', () => {
+  it('should build query string from params', () => {
+    const qs = buildQueryString({ name: 'Alice', age: 25 })
+    expect(qs).toContain('name=Alice')
+    expect(qs).toContain('age=25')
+    expect(qs).toMatch(/^\?/)
   })
 
   it('should skip null/undefined values', () => {
-    const url = new URL('https://example.com/api')
-    appendQueryParams(url, { name: 'Alice', skip: null, also: undefined })
-    expect(url.searchParams.has('skip')).toBe(false)
-    expect(url.searchParams.has('also')).toBe(false)
+    const qs = buildQueryString({ name: 'Alice', skip: null, also: undefined })
+    expect(qs).toContain('name=Alice')
+    expect(qs).not.toContain('skip')
+    expect(qs).not.toContain('also')
   })
 
   it('should JSON-stringify non-string values', () => {
-    const url = new URL('https://example.com/api')
-    appendQueryParams(url, { obj: { a: 1 } })
-    expect(url.searchParams.get('obj')).toBe('{"a":1}')
+    const qs = buildQueryString({ obj: { a: 1 } })
+    expect(qs).toContain(encodeURIComponent('{"a":1}'))
+  })
+
+  it('should return empty string for empty object', () => {
+    const qs = buildQueryString({})
+    expect(qs).toBe('')
+  })
+})
+
+describe('getPathAndQuery', () => {
+  it('should extract path and query from full URL', () => {
+    expect(getPathAndQuery('https://example.com/v5/classes/users')).toBe('/v5/classes/users')
+    expect(getPathAndQuery('https://example.com/v5/classes/users?name=Alice')).toBe(
+      '/v5/classes/users?name=Alice'
+    )
+  })
+
+  it('should return / for root URL', () => {
+    expect(getPathAndQuery('https://example.com')).toBe('/')
+  })
+
+  it('should return string unchanged for path-only inputs', () => {
+    expect(getPathAndQuery('/v5/classes/users')).toBe('/v5/classes/users')
   })
 })
 

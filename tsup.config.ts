@@ -10,7 +10,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   minify: true,
-  target: 'es2020',
+  target: 'es2017',
   outDir: 'dist',
   external: ['@system.fetch', '@system.storage'],
   esbuildOptions(options) {

@@ -13,5 +13,5 @@ export {
   isPlainObject,
   isNonEmptyArrayWithNonEmptyObjects,
 } from './convert'
-export { normalizeBaseUrl, appendQueryParams } from './url'
+export { normalizeBaseUrl, buildQueryString, getPathAndQuery } from './url'
 export { formatTimestampsToLocal } from './time'
