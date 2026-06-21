@@ -71,7 +71,7 @@ const { data: findResult } = await db.findById('507f1f77bcf86cd799439011')
 console.log(findResult.result) // { _id: '507f1f77...', name: '张三', ... }
 
 // 通过 ObjectID 更新
-await db.updateById('507f1f77bcf86cd799439011', { age: 26 })
+await db.updateById('507f1f77bcf86cd799439011', { $set: { age: 26 } })
 
 // 通过 ObjectID 删除
 await db.deleteById('507f1f77bcf86cd799439011')

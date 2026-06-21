@@ -71,7 +71,7 @@ const { data: findResult } = await db.findById('507f1f77bcf86cd799439011')
 console.log(findResult.result) // { _id: '507f1f77...', name: 'Alice', ... }
 
 // Update by ObjectID
-await db.updateById('507f1f77bcf86cd799439011', { age: 26 })
+await db.updateById('507f1f77bcf86cd799439011', { $set: { age: 26 } })
 
 // Delete by ObjectID
 await db.deleteById('507f1f77bcf86cd799439011')
