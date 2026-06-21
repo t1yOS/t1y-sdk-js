@@ -105,7 +105,7 @@
     <div class="section">
       <h3>Database Operations</h3>
       <label>Collection Name</label>
-      <input id="collection" value="test" placeholder="collection name" />
+      <input id="collection" value="users" placeholder="collection name" />
       <button id="insertBtn" disabled>Insert One</button>
       <button id="findOneBtn" disabled>Find One</button>
       <button id="findBtn" disabled>Find (Paginated)</button>
@@ -217,7 +217,9 @@
             return
           }
           const res = await coll().updateById(findRes.data.results[0]._id, {
-            updated: true,
+            $set: {
+              updated: true,
+            },
           })
           showStatus('Updated', 'success')
           showResult(res)
