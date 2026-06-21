@@ -1,6 +1,6 @@
 {
   "name": "t1y-sdk-js",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "t1yOS Serverless Platform JavaScript/TypeScript SDK — cloud database, metadata, and cloud functions client",
   "author": "华易云联（杭州）网络科技有限责任公司",
   "license": "MIT",
@@ -47,14 +47,14 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "build:all": "npm run build && npm run build:umd",
-    "build:umd": "./node_modules/.bin/esbuild src/index.browser.ts --bundle --minify --format=iife --global-name=T1Y --outfile=dist/umd/t1y.min.js --target=es2017",
+    "build:all": "pnpm run build && pnpm run build:umd",
+    "build:umd": "esbuild src/index.browser.ts --bundle --minify --format=iife --global-name=T1Y --outfile=dist/umd/t1y.min.js --target=es2017 --external:@system.fetch --external:@system.storage",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "echo 'Lint not configured yet'",
     "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
-    "prepublishOnly": "npm run build:all"
+    "prepublishOnly": "pnpm run build:all"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",

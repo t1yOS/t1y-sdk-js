@@ -4,6 +4,21 @@
 
 [t1yOS](https://www.t1y.net) Serverless 平台 JavaScript/TypeScript SDK — 云数据库、元数据和云函数客户端。
 
+## 平台支持
+
+| 平台                     | 支持 | 传输 API        | 说明                       |
+| ------------------------ | ---- | --------------- | -------------------------- |
+| Web / Vue / React / HTML | ✅   | `fetch`         | 现代浏览器                 |
+| Node.js                  | ✅   | `fetch` (18+)   | 使用原生 `fetch` API       |
+| 微信小程序               | ✅   | `wx.request`    | 自动检测                   |
+| QQ 小程序                | ✅   | `qq.request`    | 自动检测（微信小程序系列） |
+| 头条小程序               | ✅   | `tt.request`    | 自动检测（微信小程序系列） |
+| 抖音小程序               | ✅   | `tt.request`    | 自动检测（微信小程序系列） |
+| 支付宝小程序             | ✅   | `my.request`    | 自动检测                   |
+| 快应用                   | ✅   | `@system.fetch` | 构建时模块解析             |
+
+> **注意：** SDK 会自动检测运行环境并使用对应的请求 API，无需手动配置——同一套代码在所有平台都能运行。
+
 ## 安装
 
 ### npm / pnpm / yarn
@@ -24,6 +39,65 @@ yarn add t1y-sdk-js
   const client = new T1Y.T1YOS({ appId: 1001, apiKey: '...', secretKey: '...' })
 </script>
 ```
+
+### 小程序
+
+**微信 / QQ / 头条 / 抖音小程序：**
+
+1. 在小程序项目中通过 npm 安装：
+
+   ```bash
+   npm install t1y-sdk-js
+   ```
+
+2. 在开发者工具中构建 npm：
+   - 微信：`工具 → 构建 npm`
+   - QQ / 头条 / 抖音：在各自开发者工具中类似操作
+
+3. 引入并使用：
+
+   ```ts
+   import { T1YOS, timeNow } from 't1y-sdk-js'
+
+   const client = new T1YOS({
+     appId: 1001,
+     apiKey: '32位API-Key',
+     secretKey: '32位Secret-Key',
+   })
+
+   await client.init()
+   // ... 使用数据库操作
+   ```
+
+> **注意：** 小程序需要将 `baseUrl` 配置到**服务器域名白名单**中。前往小程序管理后台 → 开发 → 服务器域名，添加你的 t1yOS 域名（例如 `https://myapp.t1y.net`）。
+
+**支付宝小程序：**
+
+操作同上——SDK 会自动检测支付宝环境并使用 `my.request` 代替 `wx.request`。在支付宝开发者控制台中配置域名白名单即可。
+
+### 快应用
+
+1. 通过 npm 安装：
+
+   ```bash
+   npm install t1y-sdk-js
+   ```
+
+2. 在快应用项目中引入并使用：
+
+   ```ts
+   import { T1YOS } from 't1y-sdk-js'
+
+   const client = new T1YOS({
+     appId: 1001,
+     apiKey: '32位API-Key',
+     secretKey: '32位Secret-Key',
+   })
+
+   await client.init()
+   ```
+
+> **注意：** 快应用的 hap-toolkit 会在构建时自动解析 `@system.fetch` 模块依赖，无需额外配置。
 
 ## 快速开始
 
@@ -261,6 +335,37 @@ signature = HMAC-SHA256(secretKey, message)
 ### 安全模式（AES-256-GCM）
 
 当启用安全模式时（通过 `isSafeMode: true` 或初始化时自动检测），请求体将使用 AES-256-GCM 加密，密钥为应用的 SecretKey，服务端响应也会自动解密。
+
+## 平台检测
+
+SDK 暴露了检测当前运行环境的工具函数：
+
+```ts
+import { getPlatformType, getMiniProgramSubType } from 't1y-sdk-js'
+
+// 返回 'h5' | 'wx' | 'my' | 'hap' | 'nodejs' | 'unknown'
+const platform = getPlatformType()
+
+// 在 'wx' 系列中，返回 'wechat' | 'qq' | 'toutiao' | 'unknown'
+const subType = getMiniProgramSubType()
+
+console.log(platform) // 例如在微信小程序中输出 'wx'
+console.log(subType) // 例如在头条小程序中输出 'toutiao'
+```
+
+### 加密可用性检测
+
+```ts
+import { isAESGCMAvailable, isWebCryptoAvailable } from 't1y-sdk-js'
+
+// 始终返回 true——纯 JS AES-256-GCM 降级方案始终可用
+console.log(isAESGCMAvailable()) // true
+
+// 检测是否有更快的原生 Web Crypto API（硬件加速）
+console.log(isWebCryptoAvailable()) // 浏览器/Node.js 中为 true，小程序中为 false
+```
+
+SDK 优先使用 **Web Crypto API**（在浏览器/Node.js 中更快、硬件加速），在没有 Web Crypto 的环境（小程序、快应用）中自动降级为**纯 JavaScript AES-256-GCM** 实现。这确保安全模式加密在所有平台上都能正常工作。
 
 ## API 参考
 

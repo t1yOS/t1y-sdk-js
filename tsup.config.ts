@@ -12,7 +12,7 @@ export default defineConfig({
   minify: true,
   target: 'es2020',
   outDir: 'dist',
-  external: [],
+  external: ['@system.fetch', '@system.storage'],
   esbuildOptions(options) {
     options.conditions = ['default']
   },

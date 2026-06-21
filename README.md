@@ -4,6 +4,21 @@
 
 [t1yOS](https://www.t1y.net) Serverless Platform JavaScript/TypeScript SDK — cloud database, metadata, and cloud functions client.
 
+## Platform Support
+
+| Platform                            | Supported | Transport API   | Notes                            |
+| ----------------------------------- | --------- | --------------- | -------------------------------- |
+| Web / Vue / React / HTML            | ✅        | `fetch`         | Modern browsers                  |
+| Node.js                             | ✅        | `fetch` (18+)   | Via native `fetch` API           |
+| WeChat Mini Program（微信小程序）   | ✅        | `wx.request`    | Auto-detected                    |
+| QQ Mini Program（QQ 小程序）        | ✅        | `qq.request`    | Auto-detected as WeChat family   |
+| Toutiao Mini Program（头条小程序）  | ✅        | `tt.request`    | Auto-detected as WeChat family   |
+| Douyin Mini Program（抖音小程序）   | ✅        | `tt.request`    | Auto-detected as WeChat family   |
+| Alipay Mini Program（支付宝小程序） | ✅        | `my.request`    | Auto-detected                    |
+| Quick App（快应用）                 | ✅        | `@system.fetch` | Via build-time module resolution |
+
+> **Note:** The SDK automatically detects the runtime environment and uses the appropriate request API. No manual configuration is needed — the same code works across all platforms.
+
 ## Installation
 
 ### npm / pnpm / yarn
@@ -24,6 +39,65 @@ yarn add t1y-sdk-js
   const client = new T1Y.T1YOS({ appId: 1001, apiKey: '...', secretKey: '...' })
 </script>
 ```
+
+### Mini Program（小程序）
+
+**WeChat / QQ / Toutiao / Douyin Mini Programs:**
+
+1. Install via npm in your mini program project:
+
+   ```bash
+   npm install t1y-sdk-js
+   ```
+
+2. Build the npm package in the mini program IDE:
+   - WeChat: `Tools → Build npm`
+   - QQ / Toutiao / Douyin: Similar option in their respective IDEs
+
+3. Import and use:
+
+   ```ts
+   import { T1YOS, timeNow } from 't1y-sdk-js'
+
+   const client = new T1YOS({
+     appId: 1001,
+     apiKey: 'your-api-key-32-characters',
+     secretKey: 'your-secret-key-32-characters',
+   })
+
+   await client.init()
+   // ... use database operations
+   ```
+
+> **Note:** Mini programs require `baseUrl` to be configured in the mini program's **domain allowlist** (服务器域名白名单). Go to the mini program admin panel → Development → Server Domain, and add your t1yOS domain (e.g., `https://myapp.t1y.net`).
+
+**Alipay Mini Program:**
+
+Same as above — the SDK auto-detects the Alipay environment and uses `my.request` instead of `wx.request`. Configure the domain allowlist in the Alipay Developer Console.
+
+### Quick App（快应用）
+
+1. Install via npm:
+
+   ```bash
+   npm install t1y-sdk-js
+   ```
+
+2. Import and use in your Quick App project:
+
+   ```ts
+   import { T1YOS } from 't1y-sdk-js'
+
+   const client = new T1YOS({
+     appId: 1001,
+     apiKey: 'your-api-key-32-characters',
+     secretKey: 'your-secret-key-32-characters',
+   })
+
+   await client.init()
+   ```
+
+> **Note:** Quick App's hap-toolkit will automatically resolve the `@system.fetch` module dependency during build. No additional configuration is required.
 
 ## Quick Start
 
@@ -261,6 +335,37 @@ signature = HMAC-SHA256(secretKey, message)
 ### Safe Mode (AES-256-GCM)
 
 When safe mode is enabled (via `isSafeMode: true` or auto-detected from init), request bodies are encrypted with AES-256-GCM using your SecretKey, and server responses are decrypted automatically.
+
+## Platform Detection
+
+The SDK exposes utilities to detect the current runtime environment:
+
+```ts
+import { getPlatformType, getMiniProgramSubType } from 't1y-sdk-js'
+
+// Returns 'h5' | 'wx' | 'my' | 'hap' | 'nodejs' | 'unknown'
+const platform = getPlatformType()
+
+// Within the 'wx' family, returns 'wechat' | 'qq' | 'toutiao' | 'unknown'
+const subType = getMiniProgramSubType()
+
+console.log(platform) // e.g., 'wx' in WeChat Mini Program
+console.log(subType) // e.g., 'toutiao' in Toutiao Mini Program
+```
+
+### Crypto Availability
+
+```ts
+import { isAESGCMAvailable, isWebCryptoAvailable } from 't1y-sdk-js'
+
+// Always returns true — pure-JS AES-256-GCM fallback is always available
+console.log(isAESGCMAvailable()) // true
+
+// Check if the faster native Web Crypto API is available
+console.log(isWebCryptoAvailable()) // true in browsers/Node.js, false in mini programs
+```
+
+The SDK uses **Web Crypto API** when available (faster, hardware-accelerated in browsers/Node.js), and automatically falls back to a **pure JavaScript AES-256-GCM** implementation in environments without Web Crypto (mini programs, Quick App). This ensures safe mode encryption works on all platforms.
 
 ## API Reference
 

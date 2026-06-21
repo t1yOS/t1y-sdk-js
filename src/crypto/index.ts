@@ -1,6 +1,6 @@
 export { sha256Hex, sha256HexAsync } from './sha256'
 export { hmacSHA256Hex, hmacSHA256HexAsync, verifyHmacSHA256 } from './hmac'
-export { encryptAESGCM, decryptAESGCM } from './aes'
+export { encryptAESGCM, decryptAESGCM, isAESGCMAvailable, isWebCryptoAvailable } from './aes'
 export type { AESGCMPayload } from './aes'
 export { createSignature, getSafeTimestamp } from './sign'
 export type { SignatureInput } from './sign'

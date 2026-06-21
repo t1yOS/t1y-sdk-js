@@ -52,6 +52,8 @@ export {
   verifyHmacSHA256,
   encryptAESGCM,
   decryptAESGCM,
+  isAESGCMAvailable,
+  isWebCryptoAvailable,
   createSignature,
   getSafeTimestamp,
   // Utils
@@ -65,6 +67,11 @@ export {
   isNonEmptyObject,
   isPlainObject,
   isNonEmptyArrayWithNonEmptyObjects,
+  // Platform
+  getPlatformType,
+  getMiniProgramSubType,
+  getMiniProgramAPI,
+  resetPlatformDetection,
   // Errors
   T1YError,
   ValidationError,

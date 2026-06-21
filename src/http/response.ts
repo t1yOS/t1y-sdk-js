@@ -1,14 +1,18 @@
 /**
  * Response handling — decryption, timestamp formatting, and error wrapping.
+ *
+ * Works with platform-agnostic `PlatformResponse` objects instead of the
+ * browser-native `Response` type, enabling cross-platform support.
  */
 
 import { decryptAESGCM } from '../crypto/aes'
 import { formatTimestampsToLocal } from '../utils/time'
 import { T1YError } from '../utils/errors'
 import type { ApiResponse } from '../types/api'
+import type { PlatformResponse } from '../platform/types'
 
 /**
- * Process a raw fetch Response into the SDK's standard ApiResponse format.
+ * Process a platform response into the SDK's standard ApiResponse format.
  *
  * Handles:
  * 1. JSON parsing or string fallback
@@ -16,22 +20,24 @@ import type { ApiResponse } from '../types/api'
  * 3. Timestamp formatting (createdAt/updatedAt → local time)
  * 4. Error wrapping for non-2xx status codes
  *
- * @param response - Raw fetch Response object
+ * @param response - Platform-agnostic response object
  * @param isSafeMode - Whether safe mode encryption is active
- * @param secretKey - Secret key for decryption (as raw string, will be encoded to Uint8Array)
+ * @param secretKey - Secret key for decryption (as raw string)
  * @param timeFormat - Time format for createdAt/updatedAt fields
  * @returns Processed ApiResponse
  */
 export async function handleResponse<T = unknown>(
-  response: Response,
+  response: PlatformResponse,
   isSafeMode: boolean,
   secretKey: string,
   timeFormat: string
 ): Promise<ApiResponse<T>> {
+  // Determine content type from response headers
+  const contentType = response.headers['content-type'] || ''
+
   // Try to parse response body
   let rawData: unknown
-  const contentType = response.headers.get('content-type') || ''
-  const responseText = await response.text()
+  const responseText = response.body
 
   if (contentType.includes('application/json')) {
     try {
@@ -72,13 +78,15 @@ export async function handleResponse<T = unknown>(
     }
   }
 
+  const isOk = response.status >= 200 && response.status < 300
+
   // If the response is a standard ApiResponse wrapper, format timestamps
   if (rawData && typeof rawData === 'object' && 'data' in (rawData as Record<string, unknown>)) {
     const apiResp = rawData as ApiResponse<T>
     apiResp.data = formatTimestampsToLocal(apiResp.data, timeFormat) as T
 
     // If the status code is not 2xx, throw a T1YError
-    if (!response.ok) {
+    if (!isOk) {
       throw new T1YError(
         apiResp.code || response.status,
         apiResp.message || response.statusText,
@@ -90,7 +98,7 @@ export async function handleResponse<T = unknown>(
   }
 
   // Handle non-standard responses
-  if (!response.ok) {
+  if (!isOk) {
     throw new T1YError(response.status, response.statusText, rawData)
   }
 
@@ -103,27 +111,26 @@ export async function handleResponse<T = unknown>(
 }
 
 /**
- * Handle fetch errors (network errors, timeouts, etc.)
+ * Handle request errors (network errors, timeouts, etc.) from any platform.
  */
 export function handleFetchError(error: unknown): never {
-  // If the error has a response property (some fetch wrappers), try to process it
-  if (error && typeof error === 'object' && 'response' in error) {
-    const errWithResponse = error as { response: Response }
-    // Async error — can't await here, throw as-is
-    throw error
-  }
-
   // Re-throw as T1YError if it's not already
   if (error instanceof T1YError) {
     throw error
   }
 
   if (error instanceof Error) {
-    // Network error
-    if (error.name === 'AbortError') {
+    // Network error / timeout
+    const message = error.message || 'Unknown error'
+    if (
+      message.includes('timeout') ||
+      message.includes('超时') ||
+      error.name === 'AbortError' ||
+      message.includes('abort')
+    ) {
       throw new T1YError(408, 'Request timeout', null)
     }
-    throw new T1YError(0, error.message, null)
+    throw new T1YError(0, message, null)
   }
 
   throw new T1YError(0, 'Unknown error', error)

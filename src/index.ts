@@ -68,6 +68,8 @@ export {
   verifyHmacSHA256,
   encryptAESGCM,
   decryptAESGCM,
+  isAESGCMAvailable,
+  isWebCryptoAvailable,
   createSignature,
   getSafeTimestamp,
 } from './crypto'
@@ -134,6 +136,16 @@ export type {
   TimeNowWeekdayChineseMarker,
   SpecialTypeMarker,
 } from './types/special-types'
+
+// Platform detection and adapters (for cross-platform usage)
+export {
+  getPlatformType,
+  getMiniProgramSubType,
+  getMiniProgramAPI,
+  resetPlatformDetection,
+} from './platform'
+
+export type { PlatformType, MiniProgramSubType } from './platform'
 
 // Default export
 export { default } from './client/T1YOS'

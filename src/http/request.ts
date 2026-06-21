@@ -7,6 +7,7 @@
  * - AES-256-GCM encryption (safe mode)
  * - Request signing (HMAC-SHA256)
  * - Auth header injection
+ * - Platform-agnostic request execution (via platform adapters)
  * - Response processing (decryption, timestamp formatting)
  */
 
@@ -16,6 +17,7 @@ import { convertDateTypes } from '../utils/convert'
 import { appendQueryParams, normalizeBaseUrl } from '../utils/url'
 import { REQUEST_TIMEOUT_MS } from '../constants'
 import { handleResponse, handleFetchError } from './response'
+import { getPlatformRequest } from '../platform/dispatcher'
 import type { T1YOSInternalConfig, HttpMethod, ApiResponse } from '../types'
 
 /**
@@ -36,6 +38,11 @@ export interface RequestOptions {
 
 /**
  * Execute an HTTP request to the t1yOS API with full auth and encryption handling.
+ *
+ * This function is platform-agnostic. It builds the request (URL, headers, body,
+ * encryption, signing) and then delegates the actual HTTP call to a platform-specific
+ * adapter that works in Web, Node.js, WeChat/QQ/Alipay/Toutiao/Douyin Mini Programs,
+ * and Quick App.
  *
  * @param client - Internal client configuration
  * @param options - Request options
@@ -58,7 +65,7 @@ export async function executeRequest<T = unknown>(
   const convertedParams = convertDateTypes(params)
 
   // Handle request body
-  let bodyForRequest: BodyInit | undefined
+  let bodyForRequest: string | undefined
   let rawBodyString = ''
 
   if (method !== 'GET') {
@@ -103,13 +110,13 @@ export async function executeRequest<T = unknown>(
     secretKey: client.secretKey,
   })
 
-  // Set up timeout with AbortController
-  const controller = new AbortController()
+  // Use the platform-specific request adapter
+  const platformRequest = getPlatformRequest()
   const timeoutMs = timeout ?? REQUEST_TIMEOUT_MS
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
-    const response = await fetch(fullUrl.toString(), {
+    const response = await platformRequest({
+      url: fullUrl.toString(),
       method,
       headers: {
         'X-T1Y-Application-ID': String(client.appId),
@@ -119,14 +126,11 @@ export async function executeRequest<T = unknown>(
         'Content-Type': 'application/json',
       },
       body: method !== 'GET' ? bodyForRequest : undefined,
-      signal: controller.signal,
+      timeout: timeoutMs,
     })
-
-    clearTimeout(timeoutId)
 
     return await handleResponse<T>(response, isSafeMode, client.secretKey, client.timeFormat)
   } catch (error) {
-    clearTimeout(timeoutId)
     return handleFetchError(error)
   }
 }
