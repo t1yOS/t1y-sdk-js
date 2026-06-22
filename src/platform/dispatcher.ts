@@ -36,6 +36,7 @@ export function getPlatformRequest(): PlatformRequestFn {
   switch (platform) {
     case 'h5':
     case 'nodejs':
+    case 'rn':
       _cachedRequest = fetchRequest
       break
     case 'wx':
@@ -56,7 +57,7 @@ export function getPlatformRequest(): PlatformRequestFn {
           'Unable to determine platform request adapter. ' +
             'The current environment does not have `fetch`, `wx.request`, `my.request`, ' +
             'or `@system.fetch` available. Please ensure you are running in a supported environment: ' +
-            'Web browser, Node.js 18+, WeChat/QQ/Alipay/Toutiao/Douyin Mini Program, or Quick App.'
+            'Web browser, Node.js 18+, React Native, WeChat/QQ/Alipay/Toutiao/Douyin Mini Program, or Quick App.'
         )
       }
       break
@@ -106,6 +107,9 @@ export function getPlatformInfo(): PlatformInfo {
       break
     case 'h5':
       sdkType = 'web'
+      break
+    case 'rn':
+      sdkType = 'react-native'
       break
     case 'nodejs':
       sdkType = 'nodejs'

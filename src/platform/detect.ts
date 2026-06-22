@@ -4,19 +4,20 @@
  * Detects the current runtime environment and returns a platform type identifier.
  * This enables the SDK to use the correct network request API for each platform:
  *
- * | Platform              | Type     | Request API        | Global Object |
- * |-----------------------|----------|--------------------|---------------|
- * | WeChat Mini Program   | `wx`     | `wx.request`       | `wx`          |
- * | QQ Mini Program       | `wx`     | `qq.request`       | `qq`          |
- * | Toutiao/Douyin Mini   | `wx`     | `tt.request`       | `tt`          |
- * | Alipay Mini Program   | `my`     | `my.request`       | `my`          |
- * | Quick App             | `hap`    | `@system.fetch`    | —             |
- * | Web / Vue / React     | `h5`     | `fetch`            | `window`      |
- * | Node.js               | `nodejs` | `fetch` (18+)      | `process`     |
+ * | Platform              | Type     | Request API        | Global Object     |
+ * |-----------------------|----------|--------------------|-------------------|
+ * | WeChat Mini Program   | `wx`     | `wx.request`       | `wx`              |
+ * | QQ Mini Program       | `wx`     | `qq.request`       | `qq`              |
+ * | Toutiao/Douyin Mini   | `wx`     | `tt.request`       | `tt`              |
+ * | Alipay Mini Program   | `my`     | `my.request`       | `my`              |
+ * | Quick App             | `hap`    | `@system.fetch`    | —                 |
+ * | React Native          | `rn`     | `fetch`            | `navigator`       |
+ * | Web / Vue / React     | `h5`     | `fetch`            | `window`          |
+ * | Node.js               | `nodejs` | `fetch` (18+)      | `process`         |
  */
 
 /** Platform type identifiers */
-export type PlatformType = 'wx' | 'my' | 'hap' | 'h5' | 'nodejs' | 'unknown'
+export type PlatformType = 'wx' | 'my' | 'hap' | 'rn' | 'h5' | 'nodejs' | 'unknown'
 
 /** Mini program sub-type within the `wx` platform family */
 export type MiniProgramSubType = 'wechat' | 'qq' | 'toutiao' | 'unknown'
@@ -31,9 +32,10 @@ let _miniProgramSubType: MiniProgramSubType | null = null
  * Detection order (from most specific to least):
  * 1. WeChat/QQ/Toutiao/Douyin Mini Programs — global `wx`/`qq`/`tt` object
  * 2. Alipay Mini Program — global `my` object
- * 3. Quick App — no `window`, no `wx`, but has device info via special flag
- * 4. Web / H5 — global `window` and `document`
- * 5. Node.js — global `process` without `window`
+ * 3. Quick App — no `window`, no `wx`, but has `@system.fetch` via `require`
+ * 4. React Native — `navigator.product === 'ReactNative'`, no `document`
+ * 5. Web / H5 — global `window` and `document`
+ * 6. Node.js — global `process` without `window`
  *
  * @returns The detected platform type
  */
@@ -76,6 +78,19 @@ export function getPlatformType(): PlatformType {
     } catch {
       // @system.fetch not available — not Quick App
     }
+  }
+
+  // Check for React Native
+  // React Native sets navigator.product === 'ReactNative' as a runtime identifier.
+  // This check runs before the Web/H5 check because RN may polyfill `window`
+  // (but not `document`) in some configurations (e.g. Hermes).
+  if (
+    typeof navigator !== 'undefined' &&
+    typeof (navigator as unknown as Record<string, unknown>).product === 'string' &&
+    (navigator as unknown as Record<string, unknown>).product === 'ReactNative'
+  ) {
+    _platformType = 'rn'
+    return _platformType
   }
 
   // Check for Web / H5 (browser environment)

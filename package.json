@@ -1,6 +1,6 @@
 {
   "name": "t1y-sdk-js",
-  "version": "5.0.4",
+  "version": "5.0.5",
   "description": "t1yOS Serverless Platform JavaScript/TypeScript SDK — cloud database, metadata, and cloud functions client",
   "author": "华易云联（杭州）网络科技有限责任公司",
   "license": "MIT",

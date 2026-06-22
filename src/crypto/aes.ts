@@ -74,6 +74,83 @@ const AES_GCM_NONCE_LENGTH = 12
 
 // ==================== Base64 helpers ====================
 
+/**
+ * Base64 alphabet used by both the native and fallback implementations.
+ */
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+
+/**
+ * Encode a string to Base64 using a pure-JS implementation.
+ *
+ * Fallback for environments where `btoa` is not available (e.g. React Native
+ * with Hermes < 0.75, or older mini program runtimes).
+ */
+function pureBtoa(data: string): string {
+  let result = ''
+  const len = data.length
+  for (let i = 0; i < len; i += 3) {
+    const a = data.charCodeAt(i) & 0xff
+    const b = i + 1 < len ? data.charCodeAt(i + 1) & 0xff : NaN
+    const c = i + 2 < len ? data.charCodeAt(i + 2) & 0xff : NaN
+    result += BASE64_CHARS[a >> 2]
+    result += BASE64_CHARS[((a & 3) << 4) | (b >> 4)]
+    result += isNaN(b) ? '=' : BASE64_CHARS[((b & 15) << 2) | (c >> 6)]
+    result += isNaN(c) ? '=' : BASE64_CHARS[c & 63]
+  }
+  return result
+}
+
+/**
+ * Decode a Base64 string using a pure-JS implementation.
+ *
+ * Fallback for environments where `atob` is not available (e.g. React Native
+ * with Hermes < 0.75, or older mini program runtimes).
+ */
+function pureAtob(data: string): string {
+  // Strip whitespace and invalid characters
+  const cleaned = data.replace(/[^A-Za-z0-9+/=]/g, '')
+  let result = ''
+  const len = cleaned.length
+  for (let i = 0; i < len; i += 4) {
+    const a = BASE64_CHARS.indexOf(cleaned[i]!)
+    const b = BASE64_CHARS.indexOf(cleaned[i + 1]!)
+    const c = BASE64_CHARS.indexOf(cleaned[i + 2]!)
+    const d = BASE64_CHARS.indexOf(cleaned[i + 3]!)
+    result += String.fromCharCode((a << 2) | (b >> 4))
+    if (c !== -1 && cleaned[i + 2] !== '=') {
+      result += String.fromCharCode(((b & 15) << 4) | (c >> 2))
+    }
+    if (d !== -1 && cleaned[i + 3] !== '=') {
+      result += String.fromCharCode(((c & 3) << 6) | d)
+    }
+  }
+  return result
+}
+
+/** Safe btoa — tries native first, falls back to pure-JS */
+function _btoa(data: string): string {
+  try {
+    if (typeof btoa === 'function') {
+      return btoa(data)
+    }
+  } catch {
+    // btoa threw (e.g. on non-Latin1 input — though we only feed it ASCII)
+  }
+  return pureBtoa(data)
+}
+
+/** Safe atob — tries native first, falls back to pure-JS */
+function _atob(data: string): string {
+  try {
+    if (typeof atob === 'function') {
+      return atob(data)
+    }
+  } catch {
+    // atob threw
+  }
+  return pureAtob(data)
+}
+
 /** Get random bytes using the best available source */
 function getRandomBytes(length: number): Uint8Array {
   const wc = getWebCrypto()
@@ -114,11 +191,11 @@ function encodeBase64(uint8array: Uint8Array): string {
   for (let i = 0; i < len; i++) {
     binary += String.fromCharCode(uint8array[i]!)
   }
-  return btoa(binary)
+  return _btoa(binary)
 }
 
 function decodeBase64(b64: string): Uint8Array {
-  const binary = atob(b64)
+  const binary = _atob(b64)
   const len = binary.length
   const bytes = new Uint8Array(len)
   for (let i = 0; i < len; i++) {

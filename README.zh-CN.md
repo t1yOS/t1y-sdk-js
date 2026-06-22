@@ -10,6 +10,7 @@
 | ------------------------ | ---- | --------------- | -------------------------- |
 | Web / Vue / React / HTML | ✅   | `fetch`         | 现代浏览器                 |
 | Node.js                  | ✅   | `fetch` (18+)   | 使用原生 `fetch` API       |
+| React Native             | ✅   | `fetch`         | 使用原生 `fetch` API       |
 | 微信小程序               | ✅   | `wx.request`    | 自动检测                   |
 | QQ 小程序                | ✅   | `qq.request`    | 自动检测（微信小程序系列） |
 | 头条小程序               | ✅   | `tt.request`    | 自动检测（微信小程序系列） |

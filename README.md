@@ -10,6 +10,7 @@
 | ----------------------------------- | --------- | --------------- | -------------------------------- |
 | Web / Vue / React / HTML            | ✅        | `fetch`         | Modern browsers                  |
 | Node.js                             | ✅        | `fetch` (18+)   | Via native `fetch` API           |
+| React Native                        | ✅        | `fetch`         | Via native `fetch` API           |
 | WeChat Mini Program（微信小程序）   | ✅        | `wx.request`    | Auto-detected                    |
 | QQ Mini Program（QQ 小程序）        | ✅        | `qq.request`    | Auto-detected as WeChat family   |
 | Toutiao Mini Program（头条小程序）  | ✅        | `tt.request`    | Auto-detected as WeChat family   |
